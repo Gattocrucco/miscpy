@@ -15,6 +15,8 @@ the file in the same directory as your script.
 
 * `loadtxt.py`: faster (a lot) version of `numpy.loadtxt`.
 
+* `mcmc.py`: functions for blocking and bootstrapping.
+
 * `uevuev.py`: function to compute the variance of the variance.
 
 * `weighted_mean.py`: function to compute a weighted mean with `ufloat`s
