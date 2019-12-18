@@ -17,4 +17,5 @@ the file in the same directory as your script.
 
 * `uevuev.py`: function to compute the variance of the variance.
 
-* `weighted_mean.py`: function to compute a weighted mean with `ufloat`s.
+* `weighted_mean.py`: function to compute a weighted mean with `ufloat`s
+  (correctly takes into account covariance).
