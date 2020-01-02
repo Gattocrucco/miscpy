@@ -6,6 +6,9 @@ the file in the same directory as your script.
 
 ## Files
 
+* `coinc.py`: simulates poissonian digital signals and counts coincidences,
+  i.e. how many times it happens they are all 1 simultaneously. Requires numba.
+
 * `errorsummary.py`: takes a `ufloat` variable (from the
   [uncertainties](https://github.com/lebigot/uncertainties) module) and separate
   its error components by tag. Useful to look at different contributions to the
