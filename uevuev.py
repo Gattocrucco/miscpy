@@ -11,11 +11,13 @@ def uevuev(x, axis=None, kurtosis=None):
     The argument axis works like usual in numpy, see for example np.mean or
     np.var documentation.
     
-    Note: it can be negative! But it is improbable for large enough sample. If
-    you assume the shape of the parent distribution, specify the kurtosis. In
-    this case the result will be strictly positive, apart from the corner case
-    in which all the values in x, apart at most one, are identical. It may be
-    useful to remember that, for any distribution, kurtosis >= 1 + skewness^2.
+    The result can be negative! But it is improbable for large enough sample.
+    
+    If you assume the shape of the parent distribution, specify the kurtosis.
+    In this case the result will be strictly positive, apart from the corner
+    case in which all the values in x, apart at most one, are identical (it
+    gives 0 then). It may be useful to remember that, for any distribution,
+    kurtosis >= 1 + skewness^2, so in particular kurtosis >= 1.
     
     The formulas are taken from https://stats.stackexchange.com/questions/307537/unbiased-estimator-of-the-variance-of-the-sample-variance.
     
@@ -42,6 +44,17 @@ def uevuev(x, axis=None, kurtosis=None):
     See also
     --------
     https://xkcd.com/2110/
+    
+    Examples
+    --------
+    Compute the mean, the error on the mean, and the error on the error on
+    the mean, using first-order error propagation:
+    >>> x = np.random.randn(1000)
+    >>> m = np.mean(x)
+    >>> var_m = np.var(x, ddof=1) / len(x)
+    >>> m_err = np.sqrt(var_m)
+    >>> var_var_m = uevuev(x)
+    >>> m_err_err = 1/2 * np.sqrt(var_var_m / var_m) / np.sqrt(len(x))
     """
     x = np.asarray(x)
     xavg = np.mean(x, axis=axis, keepdims=True)
