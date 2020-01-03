@@ -69,11 +69,12 @@ def uevuev(x, axis=None, kurtosis=None):
     delta4 = delta2 ** 2
     m2 = np.sum(delta2, axis=axis) / N
     m4 = np.sum(delta4, axis=axis) / N
+    denom = (N-1) * (N-2) * (N-3)
     if kurtosis is None:
-        return N/(N-1) * ((N-1)**2 * m4 - (N**2-3) * m2**2) / ((N-1) * (N-2) * (N-3))
+        return N/(N-1) * ((N-1)**2 * m4 - (N**2-3) * m2**2) / denom
     else:
         assert(np.all(kurtosis >= 1))
-        return (kurtosis - (N-3)/(N-1)) * ((N**2-3*N+3) * m2**2 - (N-1) * m4) / ((N-1) * (N-2) * (N-3))
+        return (kurtosis - (N-3)/(N-1)) * ((N**2-3*N+3) * m2**2 - (N-1) * m4) / denom
 
 if __name__ == '__main__':
     import unittest
