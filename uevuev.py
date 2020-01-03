@@ -1,3 +1,5 @@
+from __future__ import division
+
 import numpy as np
     
 def uevuev(x, axis=None, kurtosis=None):
@@ -18,6 +20,10 @@ def uevuev(x, axis=None, kurtosis=None):
     case in which all the values in x, apart at most one, are identical (it
     gives 0 then). It may be useful to remember that, for any distribution,
     kurtosis >= 1 + skewness^2, so in particular kurtosis >= 1.
+    
+    You must assume an exact value for the kurtosis. If you pass in an unbiased
+    estimate of the kurtosis, the output will not be unbiased (still a good
+    estimate anyway).
     
     The formulas are taken from https://stats.stackexchange.com/questions/307537/unbiased-estimator-of-the-variance-of-the-sample-variance.
     
@@ -70,60 +76,76 @@ def uevuev(x, axis=None, kurtosis=None):
         return (kurtosis - (N-3)/(N-1)) * ((N**2-3*N+3) * m2**2 - (N-1) * m4) / ((N-1) * (N-2) * (N-3))
 
 if __name__ == '__main__':
-    # Test the function.
+    import unittest
     
-    # Test 1.
-    # Just check it runs on 1D input.
-    uevuev(np.random.randn(1000))
+    class TestUevuev(unittest.TestCase):
+        
+        def test_run(self):
+            # Just check it runs on 1D input.
+            uevuev(np.random.randn(1000))
+        
+        def test_axis(self):
+            # Check it works on given axis and gives same result if flattened.
+            x = np.random.randn(100, 100)
+            y1 = uevuev(x, axis=1)
+            y2 = np.array([uevuev(x) for x in x])
+            self.assertTrue(np.allclose(y1, y2, rtol=1e-15, atol=1e-15))
     
-    # Test 2.
-    # Check it works on given axis and gives same result if flattened.
-    x = np.random.randn(100, 100)
-    y1 = uevuev(x, axis=1)
-    y2 = np.array([uevuev(x) for x in x])
-    assert(np.allclose(y1, y2, rtol=1e-15, atol=1e-15))
+        def test_multidim(self):
+            # Check with multidim axis.
+            x = np.random.randn(10, 10, 10, 10)
+            y1 = uevuev(x, axis=(0, 2))
+            flat_y2 = [uevuev([x[:, i, :, j]]) for i, j in np.ndindex(10, 10)]
+            y2 = np.array(flat_y2).reshape(10, 10)
+            assert(np.allclose(y1, y2, rtol=1e-15, atol=1e-15))
+        
+        def test_kurtosis_broadcast(self):
+            # Check kurtosis broadcasts correctly.
+            x = np.random.randn(10, 10, 10, 10)
+            y1 = uevuev(x, axis=(0, 2), kurtosis=1 + np.arange(100).reshape(10, 10))
+            flat_y2 = [
+                uevuev([x[:, i, :, j]], kurtosis=1 + j + 10 * i)
+                for i, j in np.ndindex(10, 10)
+            ]
+            y2 = np.array(flat_y2).reshape(10, 10)
+            assert(np.allclose(y1, y2, rtol=1e-15, atol=1e-15))
     
-    # Test 3.
-    # Check with multidim axis.
-    x = np.random.randn(10, 10, 10, 10)
-    y1 = uevuev(x, axis=(0, 2))
-    y2 = np.array([uevuev([x[:, i, :, j]]) for i, j in np.ndindex(10, 10)]).reshape(10, 10)
-    assert(np.allclose(y1, y2, rtol=1e-15, atol=1e-15))
+        def test_normal(self):
+            # Check it gives sensible result with normal distribution.
+            x = np.random.randn(1000, 100)
+            true_value = 2 / (x.shape[1] - 1)
+            estimate = uevuev(x, axis=-1)
+            delta = np.abs(np.mean(estimate) - true_value)
+            sigma = np.std(estimate, ddof=1) / np.sqrt(len(estimate))
+            assert(delta < 5 * sigma)
     
-    # Test 3a.
-    # Check kurtosis broadcasts correctly.
-    x = np.random.randn(10, 10, 10, 10)
-    y1 = uevuev(x, axis=(0, 2), kurtosis=1 + np.arange(100).reshape(10, 10))
-    y2 = np.array([uevuev([x[:, i, :, j]], kurtosis=1 + j + 10 * i) for i, j in np.ndindex(10, 10)]).reshape(10, 10)
-    assert(np.allclose(y1, y2, rtol=1e-15, atol=1e-15))
+        def test_normal_assumed(self):
+            # Check it gives sensible result with normal distribution assuming
+            # kurtosis.
+            x = np.random.randn(1000, 100)
+            true_value = 2 / (x.shape[1] - 1)
+            estimate = uevuev(x, axis=-1, kurtosis=3)
+            delta = np.abs(np.mean(estimate) - true_value)
+            sigma = np.std(estimate, ddof=1) / np.sqrt(len(estimate))
+            assert(delta < 5 * sigma)
     
-    # Test 4.
-    # Check it gives sensible result with normal distribution.
-    x = np.random.randn(1000, 100)
-    true_value = 2 / (x.shape[1] - 1)
-    estimate = uevuev(x, axis=-1)
-    delta = np.abs(np.mean(estimate) - true_value)
-    sigma = np.std(estimate, ddof=1) / np.sqrt(len(estimate))
-    assert(delta < 5 * sigma)
+        def test_corner(self):
+            # Check it gives 0 for corner case.
+            x = np.ones((1000, 10))
+            x[:, 0] = np.linspace(-10, 10, 1000)
+            vv = uevuev(x, axis=-1, kurtosis=3.14)
+            assert(np.allclose(0, vv, atol=1e-13, rtol=1e-13))
     
-    # Test 5.
-    # Check it gives sensible result with normal distribution assuming kurtosis.
-    x = np.random.randn(1000, 100)
-    true_value = 2 / (x.shape[1] - 1)
-    estimate = uevuev(x, axis=-1, kurtosis=3)
-    delta = np.abs(np.mean(estimate) - true_value)
-    sigma = np.std(estimate, ddof=1) / np.sqrt(len(estimate))
-    assert(delta < 5 * sigma)
+        def test_positive(self):
+            # Check it yields positive result when kurtosis is specified.
+            x = np.random.binomial(1, 0.7, size=(1000, 10))
+            vv = uevuev(x, axis=-1, kurtosis=1)
+            assert(np.all(vv >= -1e-15))
+        
+        def test_kurtosis_bound(self):
+            # Check it raises if kurtosis less than 1.
+            x = np.random.randn(1000)
+            with self.assertRaises(AssertionError):
+                vv = uevuev(x, kurtosis=0.999)
     
-    # Test 6.
-    # Check it gives 0 for corner case.
-    x = np.ones((1000, 10))
-    x[:, 0] = np.linspace(-10, 10, 1000)
-    vv = uevuev(x, axis=-1, kurtosis=3.14)
-    assert(np.allclose(0, vv, atol=1e-13, rtol=1e-13))
-    
-    # Test 7.
-    # Check it yields positive result when kurtosis is specified.
-    x = np.random.binomial(1, 0.7, size=(1000, 10))
-    vv = uevuev(x, axis=-1, kurtosis=1)
-    assert(np.all(vv >= -1e-15))
+    unittest.main()
