@@ -92,10 +92,11 @@ def blocking_bootstrap_single(v, f, n, m, out=None):
     if out is None:
         out = np.empty(n)
     nblocks = len(v) // m
-    v = v[:nblocks * m].reshape(nblocks, m)
+    tail_shape = v.shape[1:]
+    v = v[:nblocks * m].reshape(nblocks, m, *tail_shape)
     for i in range(n):
-        w = v[np.random.randint(0, nblocks, size=nblocks), :].reshape(-1)
-        out[i] = f(w)
+        w = v[np.random.randint(0, nblocks, size=nblocks)]
+        out[i] = f(w.reshape(nblocks * m, *tail_shape))
     return out
 
 def blocking_bootstrap_vectorized(v, f, n, m, dtype=float):
