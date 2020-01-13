@@ -29,5 +29,7 @@ just placing the file in the same directory as your script.
 
 * `uevuev.py`: compute the variance of the variance.
 
+* `uformat.py`: format numbers with uncertainties.
+
 * `weighted_mean.py`: compute a weighted mean with `ufloat`s (correctly takes
   into account covariance).
