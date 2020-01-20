@@ -7,10 +7,12 @@ import math
 import copy
 
 __doc__ = """
+The principal function in this module is formatcov.
+
 Functions
 ---------
-uformat : format a number with uncertainty.
 formatcov : format a vector with a covariance matrix.
+uformat : format a number with uncertainty.
 num2si : format a number using a multiple of 3 exponent or SI suffixes.
 num2sup, num2sub : format a number as unicode superscript or subscript.
 

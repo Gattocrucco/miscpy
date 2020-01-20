@@ -27,6 +27,8 @@ just placing the file in the same directory as your script.
 * `rhat.py`: compute the Gelman-Rubin split-$\hat R$ statistics for assessing
   convergence of Markov chains.
 
+* `thin.py`: decimate an array almost evenly with randomized disuniformity.
+
 * `uevuev.py`: compute the variance of the variance.
 
 * `uformat.py`: format numbers with uncertainties.
