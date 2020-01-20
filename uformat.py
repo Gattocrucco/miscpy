@@ -7,17 +7,16 @@ import math
 import copy
 
 __doc__ = """
-Functions for formatting numbers and uncertainties.
-
 Functions
 ---------
-uformat : format a number with uncertainty
-formatcov : format a vector of numbers with a covariance matrix
-num2si : format a number with a multiple of 3 exponent or SI suffixes
+uformat : format a number with uncertainty.
+formatcov : format a vector with a covariance matrix.
+num2si : format a number using a multiple of 3 exponent or SI suffixes.
+num2sup, num2sub : format a number as unicode superscript or subscript.
 
 Classes
 -------
-TextMatrix : represents a table, can output LaTeX
+TextMatrix : simple class for representing tables.
 """
 
 def normcov(cov):
@@ -336,6 +335,8 @@ class TextMatrix(object):
     text : generic formatter.
     latex : format as latex table.
     transpose : transpose the matrix.
+    __mul__ : multiplication stacks matrices horizontally.
+    __truediv__ : division stacks matrices vertically.
     """
     
     def __init__(self, matrix, fill='', fill_side='right'):
@@ -367,7 +368,7 @@ class TextMatrix(object):
             lengths.append(len(matrix[i]))
             
         # make sure each element of matrix has the same length
-        maxlength = max(lengths)
+        maxlength = max(lengths, default=0)
         for i in range(len(matrix)):
             if len(matrix[i]) != maxlength:
                 if fill_side == 'right':
@@ -412,7 +413,10 @@ class TextMatrix(object):
         s : string
             Matrix formatted as string.
         """
-        nrows, ncols = len(self._matrix), len(self._matrix[0])
+        nrows = len(self._matrix)
+        if nrows == 0:
+            return ''
+        ncols = len(self._matrix[0])
         
         # convert matrix elements to strings, applying subs
         str_matrix = []
@@ -470,9 +474,26 @@ class TextMatrix(object):
         are not copied.
         """
         return type(self)([[self._matrix[row][col] for row in range(len(self._matrix))] for col in range(len(self._matrix[0]))])
+    
+    def __mul__(self, other):
+        """Multiplication concatenates two matrices horizontally."""
+        assert(isinstance(other, TextMatrix))
+        assert(len(other._matrix) == len(self._matrix))
+        return self.__class__([l + r for l, r in zip(self._matrix, other._matrix)])
+    
+    def __truediv__(self, other):
+        """Division concatenates two matrices vertically."""
+        assert(isinstance(other, TextMatrix))
+        assert(len(self._matrix) == 0 or len(other._matrix) == 0 or len(other._matrix[0]) == len(self._matrix[0]))
+        return self.__class__(self._matrix + other._matrix)
 
 if __name__ == '__main__':
     import unittest
+    
+    class TestTextMatrix(unittest.TestCase):
+        
+        def test_empty(self):
+            TextMatrix([])
     
     class TestFormat(unittest.TestCase):
 
