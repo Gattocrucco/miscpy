@@ -33,9 +33,10 @@ def rhat(a, splitaxis=0, sampleaxis=1):
     a : numpy array
         Must be at least 2 dimensional.
     splitaxis : integer, default: 0
-        The axis of a that runs along chain pieces.
+        The axis of `a` that runs along chain pieces.
     sampleaxis : integer, default: 1
-        The axis of a that runs along samples. Must be different from splitaxis.
+        The axis of `a` that runs along samples. Must be different from
+        splitaxis.
     
     Returns
     -------

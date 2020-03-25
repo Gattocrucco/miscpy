@@ -24,14 +24,14 @@ def neff(a, splitaxis=0, sampleaxis=1):
     a : array
         An at least 2D array.
     splitaxis : integer, default: 0
-        The axis of a that runs along chains.
+        The axis of `a` that runs along chains.
     sampleaxis : integer, default: 1
-        The axis of a that runs along samples in the chains.
+        The axis of `a` that runs along samples in the chains.
     
     Returns
     -------
     n_eff : float or array
-        If a is 2D, a float, otherwise an array.
+        If `a` is 2D, a float, otherwise an array.
     
     Example
     -------

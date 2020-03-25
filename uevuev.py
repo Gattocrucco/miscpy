@@ -4,7 +4,8 @@ import numpy as np
     
 def uevuev(x, axis=None, kurtosis=None):
     """
-    Unbiased Estimator of the Variance of the Unbiased Estimator of the Variance
+    Unbiased Estimator of the Variance of the Unbiased Estimator of the
+    Variance.
     
     This function computes an unbiased estimate of the variance of the sample
     variance. The sample variance is the one with N - 1, i.e. you would compute
@@ -65,10 +66,10 @@ def uevuev(x, axis=None, kurtosis=None):
     x = np.asarray(x)
     xavg = np.mean(x, axis=axis, keepdims=True)
     N = np.prod(x.shape) // np.prod(xavg.shape)
-    delta2 = (x - xavg) ** 2
-    delta4 = delta2 ** 2
-    m2 = np.sum(delta2, axis=axis) / N
-    m4 = np.sum(delta4, axis=axis) / N
+    delta = (x - xavg) ** 2
+    m2 = np.sum(delta, axis=axis) / N
+    delta *= delta
+    m4 = np.sum(delta, axis=axis) / N
     denom = (N-1) * (N-2) * (N-3)
     if kurtosis is None:
         return N/(N-1) * ((N-1)**2 * m4 - (N**2-3) * m2**2) / denom
@@ -84,6 +85,15 @@ if __name__ == '__main__':
         def test_run(self):
             # Just check it runs on 1D input.
             uevuev(np.random.randn(1000))
+        
+        def test_fixed(self):
+            """Check with fixed values I computed once."""
+            x = np.array([
+                -1.33732893,  0.56876361, -0.08921175, -1.98455305, -1.42938293,
+                -0.60432474, -0.69840249, -0.15742432,  0.80079734,  0.93249997
+            ])
+            self.assertTrue(np.allclose(uevuev(x), 0.08691819049888123))
+            self.assertTrue(np.allclose(uevuev(x, kurtosis=3.1415), 0.21014786463251045))
         
         def test_axis(self):
             # Check it works on given axis and gives same result if flattened.
