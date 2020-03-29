@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import division
 
 import numpy as np
 import uncertainties
@@ -261,7 +262,7 @@ def num2sup(x, format=None):
 
 _uformat_vect = np.vectorize(uformat, otypes=[str], excluded={2, 3, 4, 5, 6})
 
-def formatcov(x, cov=None, labels=None):
+def formatcov(x, cov=None, labels=None, corrfmt='.0f'):
     """
     Format an estimate with a covariance matrix as an upper triangular matrix
     with values on the diagonal (with uncertainties) and correlations
@@ -278,6 +279,8 @@ def formatcov(x, cov=None, labels=None):
     labels : list of strings
         Labels for the header of the matrix. If there are less than M labels,
         only the first elements are given labels.
+    corrfmt : str
+        Format for the correlations.
     
     Returns
     -------
@@ -321,7 +324,8 @@ def formatcov(x, cov=None, labels=None):
         matrix.append([pars[i]])
         for j in range(i + 1, len(corr)):
             c = corr[i, j]
-            matrix[-1].append('{:.1f} %'.format(c) if math.isfinite(c) else str(c))
+            cs = ('{:' + corrfmt + '} %').format(c) if math.isfinite(c) else str(c)
+            matrix[-1].append(cs)
     
     return TextMatrix(matrix, fill_side='left')
 
@@ -451,7 +455,9 @@ class TextMatrix(object):
         Keyword arguments
         -----------------
         Keyword arguments are passed to the <text> method, taking
-        precedence on settings for LaTeX formatting.
+        precedence on settings for LaTeX formatting. The `subs` argument is
+        treated separately: the default one is updated with the contents of the
+        one from **kwargs.
         
         Returns
         -------
@@ -467,6 +473,7 @@ class TextMatrix(object):
             '&': r'\&'
         }
         kw = dict(before='', after='', between=' & ', newline=' \\\\\n', subs=subs)
+        kw['subs'].update(kwargs.pop('subs', dict()))
         kw.update(kwargs)
         return self.text(**kw)
     
