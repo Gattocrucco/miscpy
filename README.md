@@ -6,8 +6,20 @@ just placing the file in the same directory as your script.
 
 ## Files
 
+  * `argminrelmin.py`: index of the minimum local minimum.
+  
+  * `breaklines.py`: break a string in lines before or after certain characters.
+  
+  * `ccdelta.py`: compute the cross-correlation of dicrete points with a
+    continuous function.
+    
+  * `clusterargsort.py`: filter away values which are close to an higher value
+    in a signal.
+
   * `coinc.py`: simulates poissonian digital signals and counts coincidences,
-    i.e. how many times it happens they are all 1 simultaneously.
+    i.e., how many times it happens they are all 1 simultaneously.
+    
+  * `colormap.py`: make a perceptually uniform colormap.
   
   * `errorsummary.py`: takes a `ufloat` variable (from the
     [uncertainties](https://github.com/lebigot/uncertainties) module) and
