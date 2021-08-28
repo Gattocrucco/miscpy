@@ -115,6 +115,12 @@ def abinboundary(lab):
 
 def computel01(lab0, lmin, lmax):
     
+    # TODO
+    # If I'm careful with signs, I can probably drop the nonlinear transform
+    # and increase the convergence speed.
+    # Do not constrain the normalization on a subset of variables in case
+    # they have to shrink to zero, use their sum.
+    
     x0 = np.ones(len(lab0) - 1)
     factor = 1 / (np.logaddexp(0, 1) * (len(lab0) - 1))
 
@@ -129,17 +135,22 @@ def computel01(lab0, lmin, lmax):
         lab[:, 0] = lmin + (lmax - lmin) * l01
         abinboundary(lab) # <- this operation prohibits writing down the
                           #    jacobian and makes it non-banded
-        diffsq = np.diff(lab, axis=0) ** 2
+        diff = np.diff(lab, axis=0)
+        diffsq = diff ** 2
 
         # diffsqrel = diffsq / diffsq[:, :1]
         # dist = np.sum(diffsqrel, axis=1)
         # eqs = np.diff(dist)
 
-        diffsq_lprec = diffsq[1:] * diffsq[:-1, :1]
-        diffsq_lsucc = diffsq[:-1] * diffsq[1:, :1]
-        eqs = np.sum(diffsq_lprec - diffsq_lsucc, axis=1)
+        # diffsq_lprec = diffsq[1:] * diffsq[:-1, :1]
+        # diffsq_lsucc = diffsq[:-1] * diffsq[1:, :1]
+        # eqs = np.sum(diffsq_lprec - diffsq_lsucc, axis=1)
+        
+        dist = np.sqrt(np.sum(diffsq, axis=1))
+        ldist = diff[:, 0]
+        eqs = dist[1:] * ldist[:-1] - dist[:-1] * ldist[1:]
 
-        return np.concatenate([eqs, [x[-1] - 1]])
+        return np.concatenate([eqs, [np.sum(x) - len(x)]])
     
     initeqs = equations(x0)
     np.testing.assert_allclose(initeqs[-1], 0, atol=1e-10)
