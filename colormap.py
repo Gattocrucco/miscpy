@@ -113,22 +113,15 @@ def abinboundary(lab):
             x = sol.root
             ilab[1:] *= x
 
-def computel01(lab0, lmin, lmax):
-    
-    # TODO
-    # If I'm careful with signs, I can probably drop the nonlinear transform
-    # and increase the convergence speed.
-    # Do not constrain the normalization on a subset of variables in case
-    # they have to shrink to zero, use their sum.
-    
+def computel01_bounded(lab0, lmin, lmax):
+
     x0 = np.ones(len(lab0) - 1)
-    factor = 1 / (np.logaddexp(0, 1) * (len(lab0) - 1))
 
     def l01transf(x):
-        diff = np.logaddexp(0, x) * factor
+        diff = np.logaddexp(0, x)
         l01 = np.pad(np.cumsum(diff), (1, 0))
         return l01 / l01[-1]
-    
+
     def equations(x):
         l01 = l01transf(x)
         lab = np.copy(lab0)
@@ -145,15 +138,45 @@ def computel01(lab0, lmin, lmax):
         # diffsq_lprec = diffsq[1:] * diffsq[:-1, :1]
         # diffsq_lsucc = diffsq[:-1] * diffsq[1:, :1]
         # eqs = np.sum(diffsq_lprec - diffsq_lsucc, axis=1)
-        
+
         dist = np.sqrt(np.sum(diffsq, axis=1))
         ldist = diff[:, 0]
         eqs = dist[1:] * ldist[:-1] - dist[:-1] * ldist[1:]
 
         return np.concatenate([eqs, [np.sum(x) - len(x)]])
-    
+
     initeqs = equations(x0)
     np.testing.assert_allclose(initeqs[-1], 0, atol=1e-10)
+
+    sol = optimize.root(equations, x0, method='hybr')
+    assert sol.success, sol.message
+
+    l01 = l01transf(sol.x)
+    assert l01[0] == 0, l01[0]
+    assert l01[-1] == 1, l01[-1]
+    return l01
+
+def computel01_unbounded(lab0, lmin, lmax):
+    
+    x0 = np.linspace(0, 1, len(lab0))[1:-1]
+    
+    def l01transf(x):
+        return np.pad(x, 1, constant_values=(0, 1))
+    
+    def equations(x):
+        l01 = l01transf(x)
+        lab = np.copy(lab0)
+        lab[:, 0] = lmin + (lmax - lmin) * l01
+        abinboundary(lab) # <- this operation prohibits writing down the
+                          #    jacobian and makes it non-banded
+        
+        diff = np.diff(lab, axis=0)
+        diffsq = diff ** 2        
+        dist = np.sqrt(np.sum(diffsq, axis=1))
+        ldist = diff[:, 0]
+        eqs = dist[1:] * ldist[:-1] - dist[:-1] * ldist[1:]
+
+        return eqs
     
     sol = optimize.root(equations, x0, method='hybr')
     assert sol.success, sol.message
@@ -162,6 +185,8 @@ def computel01(lab0, lmin, lmax):
     assert l01[0] == 0, l01[0]
     assert l01[-1] == 1, l01[-1]
     return l01
+
+computel01 = computel01_bounded
 
 def plotcmap(ax, cmap, N=512, **kw):
     img = np.linspace(0, 1, N)[None]
