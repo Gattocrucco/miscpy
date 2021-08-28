@@ -5,13 +5,13 @@ from scipy import interpolate, optimize
 
 lab_to_rgb = colorspacious.cspace_converter('CAM02-UCS', 'sRGB1')
     
-def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100)):
+def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100), return_pos=False):
     """
     Make a perceptually uniform colormap with increasing luminosity.
     
     Parameters
     ----------
-    colors : sequence of matplotlib colors
+    colors : sequence matplotlib colors
         A sequence of colors. The hue of the colors will be preserved, but
         their luminosity will be changed and their positioning along the
         colormap scale will not be in general by evenly spaced steps.
@@ -20,11 +20,17 @@ def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100)):
     lrange : sequence
         Two values for the start and end luminosity in range [0, 100].
         Default (0, 100).
+    return_pos : bool
+        If True, also return the position along the scale of the input colors.
+        Default False.
     
     Return
     ------
     cmap : matplotlib.colors.ListedColormap
         A new colormap.
+    l01 : sequence of numbers
+        The positions along the 0-1 segment of the colors in the user-given
+        sequence. Returned only if `return_pos` is True.
     
     Notes
     -----
@@ -37,17 +43,14 @@ def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100)):
     The uniformity is preserved in grayscale, assuming that the conversion is
     done zeroing the chroma parameter of CIECAM02.
     
+    The RGB values in the colormap are in the sRGB1 colorspace. The same is
+    assumed for the input colors.
+    
     Raises
     ------
-    The function may fail if there are two consecutive similar colors in the
-    list.
+    The function may fail if there are two consecutive very similar colors in
+    the list.
     """
-    
-    # TODO
-    # Does not work when there are two consecutive similar colors. Tentative
-    # solution: keep diff(l01) positive in the equations by mapping (-∞,∞)
-    # to (0,∞) and then adding an equation that fixes the sum of the variables
-    # to 1.
     
     rgb0 = np.array([_colors.to_rgb(color) for color in colors])
     lab0 = colorspacious.cspace_convert(rgb0, 'sRGB1', 'CAM02-UCS')
@@ -83,7 +86,10 @@ def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100)):
     rgb = lab_to_rgb(lab)
     rgb = np.clip(rgb, 0, 1)
     
-    return _colors.ListedColormap(rgb)
+    rt = _colors.ListedColormap(rgb)
+    if return_pos:
+        rt = (rt, l01)
+    return rt
 
 def abinboundary(lab):
     # lab = array of triplets (l, a, b)
@@ -108,31 +114,56 @@ def abinboundary(lab):
             ilab[1:] *= x
 
 def computel01(lab0, lmin, lmax):
-    def diffsquares(x):
-        # (x[i+1] - x[i])^2 - (x[i] - x[i-1])^2
-        return (x[2:] - x[:-2]) * (x[:-2] - 2 * x[1:-1] + x[2:])
-
-    def padl01(l01_var):
-        return np.pad(l01_var, 1, constant_values=(0, 1))
     
-    def equations(l01_var):
-        lab = np.copy(lab0)
-        l01 = padl01(l01_var)
-        lab[:, 0] = lmin + (lmax - lmin) * l01
-        abinboundary(lab)
-        diffsq = np.diff(lab, axis=0) ** 2
-        diffsqrel = diffsq / diffsq[:, :1]
-        dist = np.sum(diffsqrel, axis=1)
-        return np.diff(dist)
+    x0 = np.ones(len(lab0) - 1)
+    factor = 1 / (np.logaddexp(0, 1) * (len(lab0) - 1))
 
-    l01_initial = np.linspace(0, 1, len(lab0))
-    sol = optimize.root(equations, l01_initial[1:-1])
+    def l01transf(x):
+        diff = np.logaddexp(0, x) * factor
+        l01 = np.pad(np.cumsum(diff), (1, 0))
+        return l01 / l01[-1]
+    
+    def equations(x):
+        l01 = l01transf(x)
+        lab = np.copy(lab0)
+        lab[:, 0] = lmin + (lmax - lmin) * l01
+        abinboundary(lab) # <- this operation prohibits writing down the
+                          #    jacobian and makes it non-banded
+        diffsq = np.diff(lab, axis=0) ** 2
+
+        # diffsqrel = diffsq / diffsq[:, :1]
+        # dist = np.sum(diffsqrel, axis=1)
+        # eqs = np.diff(dist)
+
+        diffsq_lprec = diffsq[1:] * diffsq[:-1, :1]
+        diffsq_lsucc = diffsq[:-1] * diffsq[1:, :1]
+        eqs = np.sum(diffsq_lprec - diffsq_lsucc, axis=1)
+
+        return np.concatenate([eqs, [x[-1] - 1]])
+    
+    initeqs = equations(x0)
+    np.testing.assert_allclose(initeqs[-1], 0, atol=1e-10)
+    
+    sol = optimize.root(equations, x0, method='hybr')
     assert sol.success, sol.message
     
-    return padl01(sol.x)
+    l01 = l01transf(sol.x)
+    assert l01[0] == 0, l01[0]
+    assert l01[-1] == 1, l01[-1]
+    return l01
 
 def plotcmap(ax, cmap, N=512, **kw):
     img = np.linspace(0, 1, N)[None]
+    if isinstance(cmap, tuple):
+        cmap, l01 = cmap
+        l01 = l01[1:-1]
+        colors = cmap(l01)
+        JCh = colorspacious.cspace_convert(colors[:, :3], 'sRGB1', 'JCh')
+        JCh[:, 1:] = 0
+        JCh[:, 0] = np.where(JCh[:, 0] < 50, 100, 0)
+        colors = colorspacious.cspace_convert(JCh, 'JCh', 'sRGB1')
+        colors = np.clip(colors, 0, 1)
+        ax.vlines(l01, 0, 1, colors=colors, linestyles='dashed')
     return ax.imshow(img, cmap=cmap, aspect='auto', extent=(0, 1, 1, 0), **kw)
 
 def plotab(J, abmax=50, N=512, **kw):
