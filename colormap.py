@@ -3,6 +3,10 @@ import colorspacious
 import numpy as np
 from scipy import interpolate, optimize
 
+__all__ = [
+    'uniform',
+]
+
 lab_to_rgb = colorspacious.cspace_converter('CAM02-UCS', 'sRGB1')
     
 def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100), return_pos=False):
@@ -52,6 +56,10 @@ def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100), return_po
     the list.
     """
     
+    # TODO
+    # bug: does not work with ['blue', 'white', 'red'] range (0, 100), but
+    # works with range (10, 90)
+    
     rgb0 = np.array([_colors.to_rgb(color) for color in colors])
     lab0 = colorspacious.cspace_convert(rgb0, 'sRGB1', 'CAM02-UCS')
     
@@ -66,7 +74,7 @@ def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100), return_po
     
     lab0[:, 0] = lmin + (lmax - lmin) * l01
     abinboundary(lab0)
-    
+
     dist = np.sqrt(np.sum(np.diff(lab0, axis=0) ** 2, axis=1))
     distrel = dist / np.diff(l01)
     np.testing.assert_allclose(distrel, np.mean(distrel))
@@ -76,7 +84,7 @@ def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100), return_po
     lab = interpolate.interp1d(l01, lab0, **kw)(newx)
     
     np.testing.assert_allclose(np.diff(lab[:, 0]), (lmax - lmin) / (N - 1))
-    
+
     distsq = np.sum(np.diff(lab, axis=0) ** 2, axis=1)
     diff = np.diff(distsq)
     maxbad = 2 + 4 * (len(lab0) - 2)
@@ -188,8 +196,10 @@ def computel01_unbounded(lab0, lmin, lmax):
 
 computel01 = computel01_bounded
 
-def plotcmap(ax, cmap, N=512, **kw):
-    img = np.linspace(0, 1, N)[None]
+def plotcmap(cmap, N=512, **kw):
+    from matplotlib import pyplot as plt
+    fig, ax = plt.subplots(num='colormap.plotcmap', clear=True)
+
     if isinstance(cmap, tuple):
         cmap, l01 = cmap
         l01 = l01[1:-1]
@@ -200,16 +210,21 @@ def plotcmap(ax, cmap, N=512, **kw):
         colors = colorspacious.cspace_convert(JCh, 'JCh', 'sRGB1')
         colors = np.clip(colors, 0, 1)
         ax.vlines(l01, 0, 1, colors=colors, linestyles='dashed')
-    return ax.imshow(img, cmap=cmap, aspect='auto', extent=(0, 1, 1, 0), **kw)
+    
+    img = np.linspace(0, 1, N)[None]
+    rt = ax.imshow(img, cmap=cmap, aspect='auto', extent=(0, 1, 1, 0), **kw)
+    fig.show()
+    return rt
 
-def plotab(J, abmax=50, N=512, **kw):
+def plotab(J, abmax=50, N=512, mask=True, **kw):
     Jab = np.empty((N, N, 3))
     Jab[..., 0] = J
     Jab[..., 1] = np.linspace(-abmax, abmax, N)
     Jab[..., 2] = Jab[..., 1].T
     rgb = colorspacious.cspace_convert(Jab, 'CAM02-UCS', 'sRGB1')
-    bad = np.any((rgb < 0) | (rgb > 1), axis=-1, keepdims=True)
-    rgb = np.where(bad, 1 if J < 50 else 0, rgb)
+    if mask:
+        bad = np.any((rgb < 0) | (rgb > 1), axis=-1, keepdims=True)
+        rgb = np.where(bad, 1 if J < 50 else 0, rgb)
 
     from matplotlib import pyplot as plt
     fig, ax = plt.subplots(num='colormap.plotab', clear=True)
@@ -218,4 +233,35 @@ def plotab(J, abmax=50, N=512, **kw):
     ax.set_title(f'J={J}')
     rt = ax.imshow(rgb, origin='lower', extent=(-abmax, abmax, -abmax, abmax), **kw)
     fig.show()
+    return rt
+
+def naivelinear(colors=['black', '#f55', 'white'], N=256, return_pos=False):
+    rgb0 = np.array([_colors.to_rgb(color) for color in colors])
+    t0 = np.linspace(0, 1, len(rgb0))
+    t = np.linspace(0, 1, N)
+    rgb = interpolate.interp1d(t0, rgb0, axis=0)(t)
+    rt = _colors.ListedColormap(rgb)
+    if return_pos:
+        rt = (rt, t0)
+    return rt
+
+def naiveuniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100), return_pos=False):        
+    
+    rgb0 = np.array([_colors.to_rgb(color) for color in colors])
+    lab0 = colorspacious.cspace_convert(rgb0, 'sRGB1', 'CAM02-UCS')
+    
+    lab = np.zeros((N, 3))
+    lab[:, 0] = np.linspace(*lrange, N)
+    
+    x = np.linspace(0, 1, len(lab0))
+    newx = np.linspace(0, 1, N)
+    kw = dict(axis=0, assume_sorted=True, copy=False)
+    lab[:, 1:] = interpolate.interp1d(x, lab0[:, 1:], **kw)(newx)
+    
+    rgb = colorspacious.cspace_convert(lab, 'CAM02-UCS', 'sRGB1')
+    rgb = np.clip(rgb, 0, 1)
+
+    rt = _colors.ListedColormap(rgb)
+    if return_pos:
+        rt = (rt, newx)
     return rt
