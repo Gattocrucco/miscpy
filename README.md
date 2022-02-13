@@ -55,6 +55,9 @@ just placing the file in the same directory as your script.
 
   * `runsliced.py`: minimal batching.
   
+  * `textbox.py`: put a legend-like box with arbitrary text on a matplotlib
+    plot.
+  
   * `thin.py`: decimate an array almost evenly with randomized disuniformity.
   
   * `uevuev.py`: compute the variance of the variance.
