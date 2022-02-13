@@ -48,5 +48,9 @@ just placing the file in the same directory as your script.
   
   * `uformat.py`: format numbers with uncertainties.
   
+  * `updowncast.py`: recursively cast fields of numpy data type to longer/
+    shorter equivalent types. Useful for saving data with shorter types after
+    checking it's within bounds.
+  
   * `weighted_mean.py`: compute a weighted mean with `ufloat`s (correctly takes
     into account covariance).

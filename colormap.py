@@ -15,7 +15,7 @@ def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100), return_po
     
     Parameters
     ----------
-    colors : sequence matplotlib colors
+    colors : sequence of matplotlib colors
         A sequence of colors. The hue of the colors will be preserved, but
         their luminosity will be changed and their positioning along the
         colormap scale will not be in general by evenly spaced steps.
@@ -25,7 +25,7 @@ def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100), return_po
         Two values for the start and end luminosity in range [0, 100].
         Default (0, 100).
     return_pos : bool
-        If True, also return the position along the scale of the input colors.
+        If True, also return the position of the input colors along the scale.
         Default False.
     
     Return
@@ -56,9 +56,16 @@ def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100), return_po
     the list.
     """
     
-    # TODO
-    # bug: does not work with ['blue', 'white', 'red'] range (0, 100), but
-    # works with range (10, 90)
+    #   TODO
+    #   Bug: does not work with ['blue', 'white', 'red'] range (0, 100), but
+    # works with range (10, 90). This probably has to do with the diverging
+    # surface at low J faking a valid RGB value, I have to draw empirical
+    # boundaries to cut that away.
+    #   Let the user choose the color space, and optionally a different space
+    # for the linear interpolation.
+    #   Let the user pick the kind of interpolation. This would break the
+    # invariance and it would be necessary to check that ab values are within
+    # boundaries.
     
     rgb0 = np.array([_colors.to_rgb(color) for color in colors])
     lab0 = colorspacious.cspace_convert(rgb0, 'sRGB1', 'CAM02-UCS')
