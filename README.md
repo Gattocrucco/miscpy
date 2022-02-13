@@ -46,6 +46,9 @@ just placing the file in the same directory as your script.
   * `neff.py`: compute the effective sample size for an autocorrelated
     sequence, defined as the asymptotic ratio between the variance and variance
     of the sample mean.
+    
+  * `npzload.py`: superclass to add serialization from/to numpy archives to
+    an object.
   
   * `rhat.py`: compute the Gelman-Rubin split-$\hat R$ statistics for assessing
     convergence of Markov chains.
