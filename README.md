@@ -10,6 +10,9 @@ just placing the file in the same directory as your script.
   
   * `breaklines.py`: break a string in lines before or after certain characters.
   
+  * `cartprod.py`: cartesian product of numpy arrays. Useful to prepare an
+    array of parameter values for a grid search on a slow procedure.
+  
   * `ccdelta.py`: compute the cross-correlation of dicrete points with a
     continuous function.
     
