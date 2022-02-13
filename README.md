@@ -33,6 +33,9 @@ just placing the file in the same directory as your script.
   
   * `loadtxt.py`: faster (a lot) version of `numpy.loadtxt`.
   
+  * `maxprominencedip.py`: find local minima sorted by higher negative
+    prominence. Fully vectorized.
+  
   * `mcmc.py`: functions for blocking and bootstrapping.
   
   * `neff.py`: compute the effective sample size for an autocorrelated
