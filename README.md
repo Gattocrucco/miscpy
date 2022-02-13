@@ -57,6 +57,8 @@ just placing the file in the same directory as your script.
   
   * `textbox.py`: put a legend-like box with arbitrary text on a matplotlib
     plot.
+    
+  * `textmatrix.py`: table manipulation object. Can print in LaTeX format.
   
   * `thin.py`: decimate an array almost evenly with randomized disuniformity.
   
