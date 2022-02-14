@@ -27,6 +27,7 @@ def runsliced(fun, ntot, n=None, pbar=None, args=()):
     # with multiprocessing.Pool(nprocesses) as pool:
     #      for _ in tqdm.tqdm(pool.imap_unordered(task, slices), total=nslices):
     #          pass
+    # or use joblib
     
     if pbar is None:
         pbar = n is not None

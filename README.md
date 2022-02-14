@@ -47,8 +47,10 @@ just placing the file in the same directory as your script.
     sequence, defined as the asymptotic ratio between the variance and variance
     of the sample mean.
     
-  * `npzload.py`: superclass to add serialization from/to numpy archives to
-    an object.
+  * `npzload.py`: superclass to add serialization from/to numpy archives to an
+    object (alternatives are
+    [joblib](https://joblib.readthedocs.io/en/latest/index.html) and pickle
+    protocol 5, but they can execute arbitrary code).
   
   * `rhat.py`: compute the Gelman-Rubin split-$\hat R$ statistics for assessing
     convergence of Markov chains.
