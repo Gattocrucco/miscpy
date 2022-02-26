@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Giacomo Petrillo
+# Released under the MIT license
+
 def textbox(ax, text, loc='lower left', **kw):
     """
     Draw a box with text on a matplotlib plot.

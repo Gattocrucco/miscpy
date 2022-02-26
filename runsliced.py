@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Giacomo Petrillo
+# Released under the MIT license
+
 import tqdm
 
 def runsliced(fun, ntot, n=None, pbar=None, args=()):

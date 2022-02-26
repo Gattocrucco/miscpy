@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Giacomo Petrillo
+# Released under the MIT license
+
 from matplotlib import colors as _colors
 import colorspacious
 import numpy as np

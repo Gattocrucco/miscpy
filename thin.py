@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Giacomo Petrillo
+# Released under the MIT license
+
 import numpy as np
 
 def thin_indices(source_n, target_n, order='random'):

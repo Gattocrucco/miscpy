@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Giacomo Petrillo
+# Released under the MIT license
+
 def _array_like(obj):
     return hasattr(obj, '__len__')
 

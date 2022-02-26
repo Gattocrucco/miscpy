@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Giacomo Petrillo
+# Released under the MIT license
+
 import numpy as np
 
 def histogram(a, bins=10, range=None, weights=None, density=None):

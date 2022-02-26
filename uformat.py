@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Giacomo Petrillo
+# Released under the MIT license
+
 # -*- coding: utf-8 -*-
 from __future__ import division
 

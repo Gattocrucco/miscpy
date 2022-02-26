@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Giacomo Petrillo
+# Released under the MIT license
+
 import pandas
 
 def loadtxt(fname, dtype=float, usecols=None, unpack=False):

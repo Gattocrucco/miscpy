@@ -1,7 +1,7 @@
 # Miscpy (miscellaneous python code)
 
 Mostly self-contained, tested and documented python functions for scientific
-computing. In case you don't know: you can import a python file as a module by
+computing. In case you don't know: you can import a Python file as a module by
 just placing the file in the same directory as your script.
 
 ## Files

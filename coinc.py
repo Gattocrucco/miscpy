@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Giacomo Petrillo
+# Released under the MIT license
+
 import numba
 
 @numba.jit('u4(f8,f8[:],f8[:],f8[:],f8)', nopython=True, cache=True)
