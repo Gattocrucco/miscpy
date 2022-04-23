@@ -3,16 +3,20 @@
 
 import pandas
 
-def loadtxt(fname, dtype=float, usecols=None, unpack=False):
+def loadtxt(fname, dtype=float, skiprows=0, usecols=None, unpack=False):
     """
     Implements a subset of numpy.loadtxt's functionality,
     using pandas.read_csv (which is much faster).
     """
+    kw = dict(
+        skiprows = skiprows,
+        delim_whitespace = True,
+        comment = '#',
+    )
+    
     # find number of columns
     if usecols is None:
-        guess = pandas.read_csv(
-            fname, header=0, nrows=2, delim_whitespace=True, comment='#'
-        )
+        guess = pandas.read_csv(fname, header=0, nrows=2, **kw)
         ncolumns = guess.shape[1]
     else:
         ncolumns = len(usecols)
@@ -20,8 +24,8 @@ def loadtxt(fname, dtype=float, usecols=None, unpack=False):
     
     # read data
     dataframe = pandas.read_csv(
-        fname, delim_whitespace=True, usecols=usecols, dtype=dtype,
-        header=None, names=names, comment='#'
+        fname, usecols=usecols, dtype=dtype, header=None, names=names,
+        **kw
     )
     
     # convert to array
