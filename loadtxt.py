@@ -7,6 +7,8 @@ def loadtxt(fname, dtype=float, skiprows=0, usecols=None, unpack=False):
     """
     Implements a subset of numpy.loadtxt's functionality,
     using pandas.read_csv (which is much faster).
+    
+    This may not be needed any more in numpy 1.23 (to be released yet).
     """
     kw = dict(
         skiprows = skiprows,
