@@ -8,7 +8,7 @@ import math
 import copy
 
 __doc__ = """
-The principal function in this module is formatcov.
+Functions to format uncertainties and covariance matrices.
 
 Functions
 ---------
@@ -49,105 +49,161 @@ def normcov(cov):
             cov[j, i] = cov[i, j]
     return cov
 
-_d = lambda x, n: int(("%.*e" % (n - 1, abs(x)))[0])
-_ap = lambda x, n: float("%.*e" % (n - 1, x))
-_nd = lambda x: math.floor(math.log10(abs(x))) + 1
-def _format_epositive(x, e, errsep=True, minexp=3, dot=True):
-    # DECIDE NUMBER OF DIGITS
-    if _d(e, 2) < 3:
-        n = 2
-        e = _ap(e, 2)
-    elif _d(e, 1) < 3:
-        n = 2
-        e = _ap(e, 1)
-    else:
-        n = 1
-    # FORMAT MANTISSAS
-    dn = int(_nd(x) - _nd(e)) if x != 0 else -n
-    nx = n + dn
-    if nx > 0:
-        ex = _nd(x) - 1
-        if nx > ex and abs(ex) <= minexp:
-            xd = nx - ex - 1
-            ex = 0
-        else:
-            xd = nx - 1
-        sx = "%.*f" % (xd, x / 10**ex)
-        se = "%.*f" % (xd, e / 10**ex)
-    else:
-        ex = _nd(e) - n
-        sx = '0'
-        se = "%.*g" % (n, e / 10**ex)
-    # RETURN
-    if errsep:
-        return sx, se, ex
-    short_se = se[-(n+1):] if '.' in se[-n:] else se[-n:]
-    # ("%#.*g" % (n, e * 10 ** (n - _nd(e))))[:n]
-    if not dot:
-        short_se = short_se.replace('.', '')
-    return sx + '(' + short_se + ')', '', ex
+def exponent(x):
+    return int(math.floor(math.log10(abs(x))))
 
-def uformat(x, e, pm=None, percent=False, comexp=True, nicexp=False, dot=True):
+def int_mantissa(x, n, e):
+    return round(x * 10 ** (n - 1 - e))
+
+def naive_ndigits(x, n):
+    log10x = math.log10(abs(x))
+    n_int = int(math.floor(n))
+    n_frac = n - n_int
+    log10x_frac = log10x - math.floor(log10x)
+    return n_int + (log10x_frac < n_frac)
+
+def ndigits(x, n):
+    ndig = naive_ndigits(x, n)
+    xexp = exponent(x)
+    rounded_x = int_mantissa(x, ndig, xexp) * 10 ** xexp
+    if rounded_x > x:
+        rounded_ndig = naive_ndigits(rounded_x, n)
+        if rounded_ndig > ndig:
+            x = rounded_x
+            ndig = rounded_ndig
+    return x, ndig
+
+def mantissa(x, n, e):
+    m = int_mantissa(x, n, e)
+    s = str(abs(int(m)))
+    assert len(s) == n or len(s) == n + 1 or (m == 0 and n < 0)
+    if n >= 1 and len(s) == n + 1:
+        e = e + 1
+        s = s[:-1]
+    return s, e
+
+def insert_dot(s, n, e, addzeros=True):
+    e = e + len(s) - n
+    n = len(s)
+    if e >= n - 1:
+        s = s + '0' * (e - n + 1)
+    elif e >= 0:
+        s = s[:1 + e] + '.' + s[1 + e:]
+    elif e <= -1 and addzeros:
+        s = '0' * -e + s
+        s = s[:1] + '.' + s[1:]
+    return s
+
+def tostring(x):
+    return '0' if x == 0 else f'{x:#.6g}'
+
+def uformat(mu, s, errdig=1.5, sep=None, *, shareexp=True, outersign=False, uniexp=False, minnegexp=6, minposexp=4, padzeros=False, possign=False):
     """
-    Format a value with its uncertainty.
-
+    Format a number with uncertainty.
+    
     Parameters
     ----------
-    x : number (or something understood by float(), e.g. string representing number)
-        The value.
-    e : number (or as above)
-        The uncertainty.
-    pm : string, optional
-        The "plusminus" symbol. If None, use compact notation.
-    percent : bool
-        If True, also format the relative error as percentage.
-    comexp : bool
-        If True, write the exponent once.
-    nicexp : bool
-        If True, format exponent like ×10¹²³.
-    dot : bool
-        If True, eventually put decimals separator in uncertainty when pm=None.
-
-    Returns
-    -------
-    s : string
-        The formatted value with uncertainty.
-
-    Examples
-    --------
-    uformat(123, 4) --> '123(4)'
-    uformat(10, .99) --> '10.0(10)'
-    uformat(1e8, 2.5e6) --> '1.000(25)e+8'
-    uformat(1e8, 2.5e6, pm='+-') --> '(1.000 +- 0.025)e+8'
-    uformat(1e8, 2.5e6, pm='+-', comexp=False) --> '1.000e+8 +- 0.025e+8'
-    uformat(1e8, 2.5e6, percent=True) --> '1.000(25)e+8 (2.5 %)'
-    uformat(nan, nan) --> 'nan +- nan'
-
-    See also
-    --------
-    xe, xep
+    mu : number
+        The central value.
+    s : number
+        The error.
+    errdig : number
+        The number of digits of the error to be shown. Must be >= 1. It can be
+        a noninteger, in which case the number of digits switches between the
+        lower nearest integer to the upper nearest integer as the first decimal
+        digit (after rounding) crosses 10 raised to the fractional part of
+        `errdig`. Default 1.5.
+    sep : None or str
+        The separator put between the central value and the error. Eventual
+        spaces must be included. If None, put the error between parentheses,
+        sharing decimal places/exponential notation with the central value.
+        Default None.
+    shareexp : bool
+        Applies if sep is not None. When using exponential notation, whether to
+        share the exponent between central value and error with outer
+        parentheses. Default True.
+    outersign : bool
+        Applied when sep is not None and shareexp is True. Whether to put the
+        sign outside or within the parentheses. Default False
+    uniexp : bool
+        When using exponential notation, whether to use unicode characters
+        instead of the standard ASCII notation. Default False.
+    minnegexp : int
+        The number of places after the comma at which the notation switches
+        to exponential notation. Default 6. The number of places from the
+        greater between central value and error is considered.
+    minposexp : int
+        The power of ten of the least significant digit at which exponential
+        notation is used. Default 4. Setting higher values may force padding
+        the error with zeros, depending on `errdig`.
+    padzeros : bool
+        Whether to pad with zeros when not using exponential notation due to
+        `minposexp` even if the least significant digits is not on the units.
+        Default False, i.e., show more digits than those specified.
+    possign : bool
+        Whether to put a `+` before the central value when it is positive.
+        Default False.
     """
-    x = float(x)
-    e = abs(float(e))
-    if not math.isfinite(x) or not math.isfinite(e) or e == 0:
-        return "%.3g %s %.3g" % (x, '+-', e)
-    sx, se, ex = _format_epositive(x, e, errsep=not (pm is None), dot=dot)
-    if ex == 0:
-        es = ''
-    elif nicexp:
-        es = "×10" + num2sup(ex, format='%d')
+    if errdig < 1:
+        raise ValueError('errdig < 1')
+    if not math.isfinite(mu) or not math.isfinite(s) or s <= 0:
+        if sep is None:
+            return f'{tostring(mu)}({tostring(s)})'
+        else:
+            return f'{tostring(mu)}{sep}{tostring(s)}'
+    
+    s, sndig = ndigits(s, errdig)
+    sexp = exponent(s)
+    muexp = exponent(mu) if mu != 0 else sexp - sndig - 1
+    smant, sexp = mantissa(s, sndig, sexp)
+    mundig = sndig + muexp - sexp
+    mumant, muexp = mantissa(mu, mundig, muexp)
+    musign = '-' if mu < 0 else '+' if possign else ''
+    
+    if mundig >= sndig:
+        use_exp = muexp >= mundig + minposexp or muexp <= -minnegexp
+        base_exp = muexp
     else:
-        es = "e%+d" % ex
-    if pm is None:
-        s = sx + es
-    elif comexp and es != '':
-        s = '(' + sx + ' ' + pm + ' ' + se + ')' + es
+        use_exp = sexp >= sndig + minposexp or sexp <= -minnegexp
+        base_exp = sexp
+    
+    if use_exp:
+        mumant = insert_dot(mumant, mundig, muexp - base_exp)
+        smant = insert_dot(smant, sndig, sexp - base_exp, sep is not None)
+    elif base_exp >= max(mundig, sndig) and not padzeros:
+        mumant = str(abs(round(mu)))
+        smant = str(abs(round(s)))
     else:
-        s = sx + es + ' ' + pm + ' ' + se + es
-    if (not percent) or sx.split('(')[0] == '0':
-        return s
-    pe = e / abs(x) * 100.0
-    return s + " (%.*g %%)" % (2 if pe < 100.0 else 3, pe)
+        mumant = insert_dot(mumant, mundig, muexp)
+        smant = insert_dot(smant, sndig, sexp, sep is not None)
+    
+    if not outersign:
+        mumant = musign + mumant
+    
+    if use_exp:
+        if uniexp:
+            asc = '0123456789+-'
+            uni = '⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻'
+            table = str.maketrans(asc, uni)
+            exp = str(base_exp).translate(table)
+            suffix = '×10' + exp
+        else:
+            suffix = f'e{base_exp:+}'
+        if sep is None:
+            r = mumant + '(' + smant + ')' + suffix
+        elif shareexp:
+            r = '(' + mumant + sep + smant + ')' + suffix
+        else:
+            r = mumant + suffix + sep + smant + suffix
+    elif sep is None:
+        r = mumant + '(' + smant + ')'
+    else:
+        r = mumant + sep + smant
+    
+    if outersign:
+        r = musign + r
+    
+    return r
 
 unicode_pm = u'±'
 unicode_sigma = u'σ'
@@ -260,7 +316,7 @@ def num2sup(x, format=None):
         x = x.replace(_subscrc[i], _supscr[i])
     return x
 
-_uformat_vect = np.vectorize(uformat, otypes=[str], excluded={2, 3, 4, 5, 6})
+_uformat_vect = np.vectorize(uformat, otypes=[str])
 
 def formatcov(x, cov=None, labels=None, corrfmt='.0f'):
     """
@@ -497,7 +553,104 @@ class TextMatrix(object):
         return self.__class__(self._matrix + other._matrix)
 
 if __name__ == '__main__':
+    
     import unittest
+    
+    def check(n, s, string, *args, **kw):
+        defaults = dict(minnegexp=2, minposexp=0)
+        defaults.update(kw)
+        f = uformat(n, s, *args, **defaults)
+        if f != string:
+            raise RuntimeError(f'{f!r} != {string!r}')
+
+    def allchecks():
+        check(1, 0.2, "1.00 pm 0.20", 1.5, " pm ")
+        check(1, 0.3, "1.00 pm 0.30", 1.5, " pm ")
+        check(1, 0.31, "1.00 pm 0.31", 1.5, " pm ")
+        check(1, 0.32, "1.0 pm 0.3", 1.5, " pm ")
+        check(-1, 0.34, "-1.00 pm 0.34", 2, " pm ")
+        check(0, 0, "0 pm 0", 2, " pm ")
+        check(123456, 0, "123456. pm 0", 2, " pm ")
+        check(12345.6, 0, "12345.6 pm 0", 2, " pm ")
+        check(12345.67, 0, "12345.7 pm 0", 2, " pm ")
+        check(1e8, 0, "1.00000e+08 pm 0", 2, " pm ")
+        check(1e-2, 0, "0.0100000 pm 0", 2, " pm ")
+        check(1e-1, 0, "0.100000 pm 0", 2, " pm ")
+        check(12345.99, 0, "12346.0 pm 0", 2, " pm ")
+        check(0, 0.001, "(0.0 pm 1.0)e-3", 2, " pm ")
+        check(0, 0.01, "(0.0 pm 1.0)e-2", 2, " pm ")
+        check(0, 0.1, "0.00 pm 0.10", 2, " pm ")
+        check(0, 1, "0.0 pm 1.0", 2, " pm ")
+        check(0, 10, "0 pm 10", 2, " pm ")
+        check(0, 100, "(0.0 pm 1.0)e+2", 2, " pm ")
+        check(0, 1000, "(0.0 pm 1.0)e+3", 2, " pm ")
+        check(0, 0.0196, "(0.0 pm 2.0)e-2", 2, " pm ")
+        check(0, 0.196, "0.00 pm 0.20", 2, " pm ")
+        check(0, 1.96, "0.0 pm 2.0", 2, " pm ")
+        check(0, 19.6, "0 pm 20", 2, " pm ")
+        check(0, 196, "(0.0 pm 2.0)e+2", 2, " pm ")
+        check(0, 0.00996, "(0.0 pm 1.0)e-2", 2, " pm ")
+        check(0, 0.0996, "0.00 pm 0.10", 2, " pm ")
+        check(0, 0.996, "0.0 pm 1.0", 2, " pm ")
+        check(0, 9.96, "0 pm 10", 2, " pm ")
+        check(0, 99.6, "(0.0 pm 1.0)e+2", 2, " pm ")
+        check(0.025, 3, "0.0 pm 3.0", 2, " pm ")
+        check(0.0251, 0.3, "0.03 pm 0.30", 2, " pm ")
+        check(0.025, 0.03, "(2.5 pm 3.0)e-2", 2, " pm ")
+        check(0.025, 0.003, "(2.50 pm 0.30)e-2", 2, " pm ")
+        check(0.0025, 0.003, "(2.5 pm 3.0)e-3", 2, " pm ")
+        check(0.251, 3, "0.3 pm 3.0", 2, " pm ")
+        check(2.5, 3, "2.5 pm 3.0", 2, " pm ")
+        check(25, 3, "25.0 pm 3.0", 2, " pm ")
+        check(2500, 300, "(2.50 pm 0.30)e+3", 2, " pm ")
+        check(1, 0.99, "1.0 pm 1.0", 1.5, " pm ")
+        check(math.inf, 1.0, "inf pm 1.00000", 2, " pm ")
+        check(-math.inf, 1.0, "-inf pm 1.00000", 2, " pm ")
+        check(0, math.inf, "0 pm inf", 2, " pm ")
+
+        check(1, 0.2, "1.00(20)", 1.5, None)
+        check(1, 0.3, "1.00(30)", 1.5, None)
+        check(1, 0.31, "1.00(31)", 1.5, None)
+        check(1, 0.32, "1.0(3)", 1.5, None)
+        check(-1, 0.34, "-1.00(34)", 2, None)
+        check(0, 0, "0(0)", 2, None)
+        check(123456, 0, "123456.(0)", 2, None)
+        check(12345.6, 0, "12345.6(0)", 2, None)
+        check(12345.67, 0, "12345.7(0)", 2, None)
+        check(1e8, 0, "1.00000e+08(0)", 2, None)
+        check(1e-2, 0, "0.0100000(0)", 2, None)
+        check(1e-1, 0, "0.100000(0)", 2, None)
+        check(12345.99, 0, "12346.0(0)", 2, None)
+        check(0, 0.001, "0.0(1.0)e-3", 2, None)
+        check(0, 0.01, "0.0(1.0)e-2", 2, None)
+        check(0, 0.1, "0.00(10)", 2, None)
+        check(0, 1, "0.0(1.0)", 2, None)
+        check(0, 10, "0(10)", 2, None)
+        check(0, 100, "0.0(1.0)e+2", 2, None)
+        check(0, 1000, "0.0(1.0)e+3", 2, None)
+        check(0, 0.0196, "0.0(2.0)e-2", 2, None)
+        check(0, 0.196, "0.00(20)", 2, None)
+        check(0, 1.96, "0.0(2.0)", 2, None)
+        check(0, 19.6, "0(20)", 2, None)
+        check(0, 196, "0.0(2.0)e+2", 2, None)
+        check(0, 0.00996, "0.0(1.0)e-2", 2, None)
+        check(0, 0.0996, "0.00(10)", 2, None)
+        check(0, 0.996, "0.0(1.0)", 2, None)
+        check(0, 9.96, "0(10)", 2, None)
+        check(0, 99.6, "0.0(1.0)e+2", 2, None)
+        check(0.025, 3, "0.0(3.0)", 2, None)
+        check(0.0251, 0.3, "0.03(30)", 2, None)
+        check(0.025, 0.03, "2.5(3.0)e-2", 2, None)
+        check(0.025, 0.003, "2.50(30)e-2", 2, None)
+        check(0.0025, 0.003, "2.5(3.0)e-3", 2, None)
+        check(0.251, 3, "0.3(3.0)", 2, None)
+        check(2.5, 3, "2.5(3.0)", 2, None)
+        check(25, 3, "25.0(3.0)", 2, None)
+        check(2500, 300, "2.50(30)e+3", 2, None)
+        check(1, 0.99, "1.0(1.0)", 1.5, None)
+        check(math.inf, 1.0, "inf(1.00000)", 2, None)
+        check(-math.inf, 1.0, "-inf(1.00000)", 2, None)
+        check(0, math.inf, "0(inf)", 2, None)
     
     class TestTextMatrix(unittest.TestCase):
         
@@ -515,25 +668,12 @@ if __name__ == '__main__':
             self.assertEqual(num2si(1, format='%+g'), '+1 ')
             # check that default rounding is sufficient
             self.assertEqual(num2si(0.7), '700 m')
-    
-        def test_uformat(self):
-            # check that big-exponent values use exponential notation
-            self.assertEqual(uformat(1.23456789e-8, 1.1111e-10, pm=None, percent=False), '1.235(11)e-8')
-            # check that number of digits is chosen correctly in case of uncertainty rounding
-            self.assertEqual(uformat(10, 0.99, pm=None, percent=False), '10.0(1.0)')
-            # check that percentual error is not negative
-            self.assertEqual(uformat(-1, 1, pm=None, percent=True), '-1.0(1.0) (100 %)')
-            # check that percentual error is suppressed if mantissa is 0 when we are using compact error notation
-            self.assertEqual(uformat(0.001, 1, pm=None, percent=True), '0(10)e-1')
-            # check that if mantissa is 0 and compact notation is not used the error has correct exponent
-            self.assertEqual(uformat(0, 1, pm='+-'), '(0 +- 10)e-1')
-            self.assertEqual(uformat(0, 10, pm='+-'), '0 +- 10')
-            self.assertEqual(uformat(0, 1e5, pm='+-'), '(0 +- 10)e+4')
-        
+            
         def test_normcov(self):
             # just check that it works because there's always someone willing to rewrite this stupid function
             cov = [[4, -3], [-3, 16]]
             normalized_cov = [[1, -0.375], [-0.375, 1]]
             self.assertTrue(np.array_equal(normcov(cov), normalized_cov))
-
+    
+    allchecks()
     unittest.main()
