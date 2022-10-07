@@ -1,7 +1,7 @@
 """
 
-Module to do inference with a BART (Bayesian Regression Tree) using Gaussian
-processes. Run as a script to do a test.
+Module to do inference with BART (Bayesian Additive Regression Trees) using
+Gaussian processes. Run as a script to do a test.
 
 The notation follows the original BART article:
 
@@ -865,9 +865,9 @@ def bart_correlation_maxd(splitsbefore, splitsbetween, splitsafter, alpha, beta,
     splitsbetween : int (p,) array
         The number of splitting points between the two points, separately along
         each coordinate.
-    totalsplits : int (p,) array
-        The total number of splitting points, i.e., the number of unique
-        datapoints minus one, separately along each coordinate.
+    splitsafter : int (p,) array
+        The number of splitting points greater than the two points, separately
+        along each coordinate.
     alpha, beta : scalar
         The hyperparameters of the branching probability.
     maxd : int
