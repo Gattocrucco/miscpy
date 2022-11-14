@@ -39,6 +39,10 @@ def uniform(colors=['black', '#f55', 'white'], N=256, lrange=(0, 100), return_po
         The positions along the 0-1 segment of the colors in the user-given
         sequence. Returned only if `return_pos` is True.
     
+    See also
+    --------
+    https://github.com/matplotlib/viscm
+    
     Notes
     -----
     The colormap is uniform according to the CAM02-UCS colorspace, in the sense

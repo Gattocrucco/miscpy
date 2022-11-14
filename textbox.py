@@ -39,7 +39,6 @@ def textbox(ax, text, loc='lower left', **kw):
     }
     
     kwargs = dict(
-        fontsize='x-small',
         xycoords='axes fraction',
         textcoords='offset points',
         bbox=dict(

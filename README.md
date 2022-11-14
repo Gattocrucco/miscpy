@@ -36,8 +36,6 @@ just placing the file in the same directory as your script.
     
   * `ising.py`: diagonalize the 1D quantum Ising hamiltonian.
   
-  * `loadtxt.py`: faster (a lot) version of `numpy.loadtxt`.
-  
   * `maxprominencedip.py`: find local minima sorted by higher negative
     prominence. Fully vectorized.
   
