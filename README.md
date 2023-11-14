@@ -7,9 +7,7 @@ just placing the file in the same directory as your script.
 ## Files
 
   * `argminrelmin.py`: index of the minimum local minimum.
-  
-  * `bart.py`: Gaussian process equivalent to a BART (Bayesian Regression Tree).
-  
+    
   * `breaklines.py`: break a string in lines before or after certain characters.
   
   * `cartprod.py`: cartesian product of numpy arrays. Useful to prepare an
